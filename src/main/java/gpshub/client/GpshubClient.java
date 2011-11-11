@@ -6,6 +6,10 @@ public interface GpshubClient {
 	
 	void addGpsHandler(GpsPkgHandler handler);
 	
-	void start();
-
+	CmdChannel getCmdChannel();
+	
+	GpsChannel getGpsChannel();
+	
+	void start() throws CmdChannelException, GpsChannelException;
+	
 }

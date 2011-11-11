@@ -8,12 +8,12 @@ import java.util.List;
 
 public class GpsChannelListener extends Thread {
 	
-	private GpsChannel gpsChannel;
+	private GpsChannelIo gpsChannel;
 	private Boolean read;
 
 	private List<GpsPkgHandler> observers;
 	
-	public GpsChannelListener(GpsChannel myGpsChannel){
+	public GpsChannelListener(GpsChannelIo myGpsChannel){
 		this.gpsChannel = myGpsChannel;
 		read = true;
 		observers = new ArrayList<GpsPkgHandler>();

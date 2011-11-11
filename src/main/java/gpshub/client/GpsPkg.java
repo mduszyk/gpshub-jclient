@@ -49,5 +49,21 @@ public class GpsPkg {
 	public void setAltitude(int altitude) {
 		this.altitude = altitude;
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("GPSPKG ");
+		sb.append(userId);
+		sb.append(" ");
+		sb.append(latitude);
+		sb.append(" ");
+		sb.append(longitude);
+		if (altitude != 0) {
+			sb.append(" ");
+			sb.append(altitude);
+		}
+		
+		return sb.toString();
+	}
 
 }

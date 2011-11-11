@@ -1,5 +1,6 @@
 package gpshub.client.io;
 
+import gpshub.client.CmdChannel;
 import gpshub.client.CmdPkg;
 
 import java.io.DataInputStream;
@@ -13,25 +14,28 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CmdChannel {
+public class CmdChannelIo implements CmdChannel {
 	
 	public static final int MAX_PKG_LEN = 512;
+	
+	private InetAddress host;
+	private int port;
 	
 	private Socket socket;
 	private DataInputStream dataStreamIn;
 	private DataOutputStream dataStreamOut;
-
-	public CmdChannel(InetAddress host, int port) throws Exception{
-		
-		try {
-			socket = new Socket(host, port);
-			OutputStream streamOut = socket.getOutputStream();
-			InputStream streamIn = socket.getInputStream();
-			dataStreamIn = new DataInputStream(streamIn);
-			dataStreamOut = new DataOutputStream(streamOut);
-		} catch (IOException e) {
-			throw new Exception("Unable to connect to a server");
-		}
+	
+	public CmdChannelIo(InetAddress host, int port) {
+		this.host = host;
+		this.port = port;
+	}
+	
+	public void connect() throws IOException {
+		socket = new Socket(host, port);
+		OutputStream streamOut = socket.getOutputStream();
+		InputStream streamIn = socket.getInputStream();
+		dataStreamIn = new DataInputStream(streamIn);
+		dataStreamOut = new DataOutputStream(streamOut);
 	}
 	
 	private void send(int packageType, String data){

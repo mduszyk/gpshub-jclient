@@ -48,4 +48,13 @@ public class CmdPkg {
 		this.data = data;
 	}
 	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder("CMDPKG ");
+		sb.append(code);
+		sb.append(" ");
+		sb.append(data);
+		
+		return sb.toString();
+	}
 }

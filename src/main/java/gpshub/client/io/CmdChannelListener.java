@@ -8,12 +8,12 @@ import java.util.List;
 
 public class CmdChannelListener extends Thread {
 	
-	private CmdChannel commandChannel;
+	private CmdChannelIo commandChannel;
 	private Boolean read;
 
 	private List<CmdPkgHandler> observers;
 	
-	public CmdChannelListener(CmdChannel cmdChannel) {
+	public CmdChannelListener(CmdChannelIo cmdChannel) {
 		this.commandChannel = cmdChannel;
 		read = true;
 		observers = new ArrayList<CmdPkgHandler>();
