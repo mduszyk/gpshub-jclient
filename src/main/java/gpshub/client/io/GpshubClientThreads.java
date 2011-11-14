@@ -1,23 +1,21 @@
 package gpshub.client.io;
 
+import gpshub.client.ChannelException;
 import gpshub.client.CmdChannel;
-import gpshub.client.CmdChannelException;
 import gpshub.client.CmdPkg;
 import gpshub.client.CmdPkgHandler;
 import gpshub.client.GpsChannel;
-import gpshub.client.GpsChannelException;
 import gpshub.client.GpsPkgHandler;
 import gpshub.client.GpshubClient;
+import gpshub.client.GpshubErrorHandler;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class GpshubClientThreads implements GpshubClient {
+public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 	
 	private CmdChannelIo cmdChannel;
 	private GpsChannelIo gpsChannel;
@@ -40,7 +38,8 @@ public class GpshubClientThreads implements GpshubClient {
 	private volatile boolean started = false;
 
 	
-	public GpshubClientThreads(String host, int portCmd, int portGps) throws UnknownHostException {
+	public GpshubClientThreads(String host, int portCmd, int portGps, 
+			GpshubErrorHandler errh) throws UnknownHostException {
 		this.host = InetAddress.getByName(host);
 		this.portCmd = portCmd;
 		this.portGps = portGps;
@@ -48,17 +47,13 @@ public class GpshubClientThreads implements GpshubClient {
 		cmdChannel = new CmdChannelIo(this.host, portCmd);
 		gpsChannel = new GpsChannelIo(this.host, portGps);
 		
-		cmdListener = new CmdChannelListener(cmdChannel);
-		cmdListener.addObserver(new CmdPkgHandler() {
-			@Override
-			public void handle(CmdPkg cmd) {
-				handleCmdPkg(cmd);
-			}
-		});
-		gpsListener = new GpsChannelListener(gpsChannel);
+		cmdListener = new CmdChannelListener(cmdChannel, errh);
+		cmdListener.addObserver(this);
+		gpsListener = new GpsChannelListener(gpsChannel, errh);
 	}
 	
-	private void handleCmdPkg(CmdPkg cmd) {
+	@Override
+	public void handle(CmdPkg cmd) {
 		switch(cmd.getCode()) {
 		
 		case CmdPkg.REGISTER_NICK_ACK:
@@ -100,7 +95,11 @@ public class GpshubClientThreads implements GpshubClient {
 		new Thread() {
 			public void run() {
 				while (!udpInitialized) {
-					gpsChannel.initializeGPS(userid, udptoken);
+					try {
+						gpsChannel.initializeGPS(userid, udptoken);
+					} catch (ChannelException e1) {
+						// try to wait and do it again
+					}
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e) {
@@ -112,17 +111,9 @@ public class GpshubClientThreads implements GpshubClient {
 	}
 
 	@Override
-	public void start() throws CmdChannelException, GpsChannelException {
-		try {
-			cmdChannel.connect();
-		} catch (IOException e) {
-			throw new CmdChannelException("Couldn't connect cmd channel " + host + ":" + portCmd, e);
-		}
-		try {
-			gpsChannel.connect();
-		} catch (SocketException e) {
-			throw new GpsChannelException("Couldn't connect gps channel " + host + ":" + portGps, e);
-		}
+	public void start() throws ChannelException {
+		cmdChannel.connect();
+		gpsChannel.connect();
 		
 		cmdListener.setDaemon(true);
 		gpsListener.setDaemon(true);
@@ -131,6 +122,10 @@ public class GpshubClientThreads implements GpshubClient {
 		gpsListener.start();
 		
 		started = true;
+	}
+	
+	public void stop() {
+		
 	}
 	
 	@Override
@@ -150,7 +145,8 @@ public class GpshubClientThreads implements GpshubClient {
 
 	/**
 	 * Return gps channel when it is ready, method waits on condition variable
-	 * until gps channel is initialized. This method can't be invoked before start().
+	 * until gps channel is initialized. This method can't be invoked
+	 * before start().
 	 */
 	@Override
 	public GpsChannel getGpsChannel() {

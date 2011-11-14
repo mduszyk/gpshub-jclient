@@ -10,6 +10,6 @@ public interface GpshubClient {
 	
 	GpsChannel getGpsChannel();
 	
-	void start() throws CmdChannelException, GpsChannelException;
+	void start() throws ChannelException;
 	
 }

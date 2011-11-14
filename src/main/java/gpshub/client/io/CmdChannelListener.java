@@ -1,8 +1,11 @@
 package gpshub.client.io;
 
+import gpshub.client.ChannelException;
 import gpshub.client.CmdPkg;
 import gpshub.client.CmdPkgHandler;
+import gpshub.client.GpshubErrorHandler;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,9 +15,12 @@ public class CmdChannelListener extends Thread {
 	private Boolean read;
 
 	private List<CmdPkgHandler> observers;
+	private GpshubErrorHandler errh;
 	
-	public CmdChannelListener(CmdChannelIo cmdChannel) {
+	public CmdChannelListener(CmdChannelIo cmdChannel, 
+			GpshubErrorHandler errh) {
 		this.commandChannel = cmdChannel;
+		this.errh = errh;
 		read = true;
 		observers = new ArrayList<CmdPkgHandler>();
 	}
@@ -22,10 +28,20 @@ public class CmdChannelListener extends Thread {
 	@Override
 	public void run() {
 		while(read) {
-			CmdPkg commandPackage = commandChannel.recv();
-			if(commandPackage != null){
-				notifyObeservers(commandPackage);
-			}		
+			try {
+				CmdPkg cmd = commandChannel.recv();
+				if(cmd != null)
+					notifyObeservers(cmd);
+			} catch (ChannelException e) {
+				if (e.getCause() instanceof SocketException) {
+					break;
+				}
+				errh.handleError(e);
+				break;
+			} catch (Exception e) {
+				errh.handleError(e);
+				break;
+			}
 		}
 	}
 	
@@ -38,8 +54,9 @@ public class CmdChannelListener extends Thread {
 	}
 	
 	private void notifyObeservers(CmdPkg commandPackage) {
-		for(CmdPkgHandler observer : observers){
+		for(CmdPkgHandler observer : observers) {
 			observer.handle(commandPackage);
 		}
 	}
+
 }
