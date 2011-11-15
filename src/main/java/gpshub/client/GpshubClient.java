@@ -11,5 +11,7 @@ public interface GpshubClient {
 	GpsChannel getGpsChannel();
 	
 	void start() throws ChannelException;
+
+	GpsChannel getInitializedGpsChannel();
 	
 }

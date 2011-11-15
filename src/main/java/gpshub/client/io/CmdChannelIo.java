@@ -104,7 +104,7 @@ public class CmdChannelIo implements CmdChannel {
 			return commandPackage;
 			
 		} catch (IOException e) {
-			throw new ChannelException("Erorr receiving cmd pkg", e);
+			throw new ChannelException("Erorr in cmd channel's recv", e);
 		}
 	}
 	

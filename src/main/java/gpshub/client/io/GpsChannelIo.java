@@ -87,7 +87,7 @@ public class GpsChannelIo implements GpsChannel {
 			socket.receive(readPacket);
 			return getUserPosition(readPacket);
 		} catch (IOException e) {
-			throw new ChannelException("Error reveiving gps pkg", e);
+			throw new ChannelException("Erorr in gps channel's recv", e);
 		}
 	}
 	

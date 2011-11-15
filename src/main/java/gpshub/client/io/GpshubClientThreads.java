@@ -143,13 +143,24 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 		return cmdChannel;
 	}
 
-	/**
-	 * Return gps channel when it is ready, method waits on condition variable
-	 * until gps channel is initialized. This method can't be invoked
-	 * before start().
-	 */
 	@Override
 	public GpsChannel getGpsChannel() {
+		return gpsChannel;
+	}
+	
+	public GpsChannel getInitializedGpsChannel() {
+		if (!udpInitialized) {
+			return null;
+		}
+		
+		return gpsChannel;
+	}
+	
+	/**
+	 * Method waits on condition variable until gps channel is initialized.
+	 * This method can't be invoked before start().
+	 */
+	public void waitForGpsChannel() {
 		if (!started) {
 			throw new IllegalStateException("GpshubClient is not started!");
 		}
@@ -166,7 +177,6 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 		} finally {
 			condLock.unlock();
 		}
-		return gpsChannel;
 	}
 
 }

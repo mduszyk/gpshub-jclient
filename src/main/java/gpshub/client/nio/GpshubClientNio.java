@@ -38,4 +38,10 @@ public class GpshubClientNio implements GpshubClient {
 		return null;
 	}
 
+	@Override
+	public GpsChannel getInitializedGpsChannel() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
