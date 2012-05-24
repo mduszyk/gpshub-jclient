@@ -56,6 +56,8 @@ public class CmdPkg {
 		bbuf.putShort(length);
 		bbuf.put(data);
 		
+		bbuf.flip();
+		
 		return bbuf;
 	}
 	

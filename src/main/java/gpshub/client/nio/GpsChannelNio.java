@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -112,6 +113,8 @@ public class GpsChannelNio implements GpsChannel {
 	}
 
 	private void write(SelectionKey key) throws IOException {
+		DatagramChannel datagramChannel = (DatagramChannel) key.channel();
+		
 		synchronized (pendingPackages) {
 			while (!pendingPackages.isEmpty()) {
 				ByteBuffer buf = (ByteBuffer) pendingPackages.get(0);

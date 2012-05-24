@@ -66,7 +66,10 @@ public class CmdChannelNio implements CmdChannel {
 		// Finish the connection. If the connection operation failed
 		// this will raise an IOException.
 		try {
-			socketChannel.finishConnect();
+			if (socketChannel.finishConnect()) {
+				// Register an interest in reading on this channel
+				key.interestOps(SelectionKey.OP_READ);
+			}
 		} catch (IOException e) {
 			// Cancel the channel's registration with our selector
 			System.out.println(e);
@@ -74,8 +77,6 @@ public class CmdChannelNio implements CmdChannel {
 			return;
 		}
 	
-		// Register an interest in reading on this channel
-		key.interestOps(SelectionKey.OP_READ);
 	}
 
 	protected void processSelectedKey(SelectionKey key) throws IOException {
@@ -150,6 +151,8 @@ public class CmdChannelNio implements CmdChannel {
 	}
 	
 	private void write(SelectionKey key) throws IOException {
+		SocketChannel socketChannel = (SocketChannel) key.channel();
+		
 		synchronized (pendingPackages) {
 			while (!pendingPackages.isEmpty()) {
 				ByteBuffer buf = (ByteBuffer) pendingPackages.get(0);
