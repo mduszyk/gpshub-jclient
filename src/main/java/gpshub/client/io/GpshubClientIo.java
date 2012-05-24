@@ -10,6 +10,7 @@ import gpshub.client.GpsPkgHandler;
 import gpshub.client.GpshubClient;
 import gpshub.client.GpshubErrorHandler;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.locks.Condition;
@@ -42,7 +43,7 @@ public class GpshubClientIo implements GpshubClient, CmdPkgHandler {
 
 	
 	public GpshubClientIo(String host, int portCmd, int portGps, 
-			GpshubErrorHandler errh) throws UnknownHostException {
+			GpshubErrorHandler errh) throws IOException {
 		this.host = InetAddress.getByName(host);
 		this.portCmd = portCmd;
 		this.portGps = portGps;

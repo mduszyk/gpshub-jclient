@@ -20,6 +20,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandler {
 
@@ -33,12 +36,18 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 	private Selector selector;
 
 	private Set<ChangeRequest> pendingChanges = new HashSet<ChangeRequest>();
+	
 	private List<Task> pendingTasks = new LinkedList<Task>();
 
 	private Integer userid;
 	private Integer udptoken;
 
 	private volatile boolean udpInitialized = false;
+	
+	private Lock condLock = new ReentrantLock();
+	private Condition gpsCond  = condLock.newCondition();
+	
+	private GpshubErrorHandler errh;
 
 
 	public GpshubClientNio(String host, int portCmd, int portGps, 
@@ -46,6 +55,8 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 		this.host = InetAddress.getByName(host);
 		this.portCmd = portCmd;
 		this.portGps = portGps;
+		this.errh = errh;
+		
 		selector = initSelector();
 
 		cmdChannel = new CmdChannelNio(this, this.host, portCmd);
@@ -73,8 +84,7 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 				selector.select(500);
 				processSelectedKeys();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				errh.handleError(e);
 			}
 		}
 	}
@@ -88,15 +98,19 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 					ChangeRequest change = (ChangeRequest) changes.next();
 					switch (change.type) {
 					case ChangeRequest.CHANGEOPS:
-						SelectionKey key = change.channel.keyFor(selector);
-						key.interestOps(change.ops);
+						if (change.channel.isRegistered()) {
+							SelectionKey key = change.channel.keyFor(selector);
+							key.interestOps(change.ops);
+							changes.remove();
+						}
 						break;
 					case ChangeRequest.REGISTER:
 						change.channel.register(selector, change.ops);
+						changes.remove();
 						break;
 					}
 				}
-				pendingChanges.clear();
+//				pendingChanges.clear();
 			}
 		}
 	}
@@ -165,10 +179,36 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 
 	@Override
 	public GpsChannel getInitializedGpsChannel() {
-		// TODO Auto-generated method stub
-		return null;
+		if (!udpInitialized) {
+			waitForGpsChannel();
+		}
+		
+		return gpsChannel;
 	}
-
+	
+	/**
+	 * Method waits on condition variable until gps channel is initialized.
+	 * This method can't be invoked before start().
+	 */
+	private void waitForGpsChannel() {
+		if (!isAlive()) {
+			throw new IllegalStateException("GpshubClient is not started!");
+		}
+		// wait for gps channel
+		condLock.lock();
+		try {
+			while (!udpInitialized) {
+				try {
+					gpsCond.await();
+				} catch (InterruptedException e) {
+					// check condition and wait again if necessary
+				}
+			}
+		} finally {
+			condLock.unlock();
+		}
+	}
+	
 	private void scheduleInitializeUdp() {
 		Task initializeUdpTask = new Task() {
 			@Override
@@ -217,6 +257,13 @@ public class GpshubClientNio extends Thread implements GpshubClient, CmdPkgHandl
 			Byte status = cmdChannel.getProtocol().getUdpAck(cmd);
 			if (status == 1) {
 				udpInitialized = true;
+				// signal condition variable
+				condLock.lock();
+				try {
+					gpsCond.signal();
+				} finally {
+					condLock.unlock();
+				}
 			}
 			break;
 

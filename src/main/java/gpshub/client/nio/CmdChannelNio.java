@@ -44,14 +44,20 @@ public class CmdChannelNio implements CmdChannel {
 		socketChannel.configureBlocking(false);
 	
 		// Kick off connection establishment
-		socketChannel.connect(new InetSocketAddress(host, port));
+		boolean isConnected = socketChannel.connect(
+				new InetSocketAddress(host, port));
 		
-		// Queue a channel registration since the caller is not the 
-		// selecting thread. As part of the registration we'll register
-		// an interest in connection events. These are raised when a channel
-		// is ready to complete connection establishment.
-		selectingThread.queueChangeRequest(new ChangeRequest(socketChannel, 
-					ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
+		if (isConnected) {
+			selectingThread.queueChangeRequest(new ChangeRequest(socketChannel, 
+					ChangeRequest.REGISTER, SelectionKey.OP_READ));
+		} else {
+			// Queue a channel registration since the caller is not the 
+			// selecting thread. As part of the registration we'll register
+			// an interest in connection events. These are raised when a channel
+			// is ready to complete connection establishment.
+			selectingThread.queueChangeRequest(new ChangeRequest(socketChannel, 
+						ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
+		}
 	}
 	
 	private void finishConnection(SelectionKey key) throws IOException {
@@ -68,7 +74,7 @@ public class CmdChannelNio implements CmdChannel {
 			return;
 		}
 	
-		// Register an interest in writing on this channel
+		// Register an interest in reading on this channel
 		key.interestOps(SelectionKey.OP_READ);
 	}
 
@@ -110,13 +116,12 @@ public class CmdChannelNio implements CmdChannel {
 			return;
 		}
 		
-		
-		if (numRead > 3) {
+		if (readBuffer.position() > 3) {
 			readBuffer.flip();
 			byte code = readBuffer.get();					
 			short totalLength = readBuffer.getShort();
 			
-			if (numRead >= totalLength) {
+			if (readBuffer.position() >= totalLength) {
 				// we have complete package
 
 				byte[] buf = new byte[totalLength - 3];
@@ -126,7 +131,6 @@ public class CmdChannelNio implements CmdChannel {
 				cmd.setCode(code);
 				cmd.setLength(totalLength);
 				cmd.setData(buf);
-				
 				
 				handlePkg(cmd);
 				
@@ -196,14 +200,13 @@ public class CmdChannelNio implements CmdChannel {
 		queueSend(pkg.toByteBuffer());
 	}
 
+	public CmdProtocol getProtocol() {
+		return protocol;
+	}
+
 	@Override
 	public void close() {
 		// TODO Auto-generated method stub
-		
-	}
-
-	public CmdProtocol getProtocol() {
-		return protocol;
 	}
 
 }
