@@ -47,7 +47,7 @@ public class GpsChannelListener extends Thread {
 		}
 	}
 	
-	public void addObserver(GpsPkgHandler packageHandler) {
+	public void addPackageHandler(GpsPkgHandler packageHandler) {
 		observers.add(packageHandler);
 	}
 	

@@ -4,6 +4,7 @@ import gpshub.client.ChannelException;
 import gpshub.client.CmdChannel;
 import gpshub.client.CmdPkg;
 import gpshub.client.CmdPkgHandler;
+import gpshub.client.CmdProtocol;
 import gpshub.client.GpsChannel;
 import gpshub.client.GpsPkgHandler;
 import gpshub.client.GpshubClient;
@@ -15,7 +16,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
+public class GpshubClientIo implements GpshubClient, CmdPkgHandler {
 	
 	private CmdChannelIo cmdChannel;
 	private GpsChannelIo gpsChannel;
@@ -36,9 +37,11 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 	private Condition gpsCond  = condLock.newCondition();
 	
 	private volatile boolean started = false;
+	
+	private CmdProtocol protocolReader = new CmdProtocol(); 
 
 	
-	public GpshubClientThreads(String host, int portCmd, int portGps, 
+	public GpshubClientIo(String host, int portCmd, int portGps, 
 			GpshubErrorHandler errh) throws UnknownHostException {
 		this.host = InetAddress.getByName(host);
 		this.portCmd = portCmd;
@@ -46,9 +49,10 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 
 		cmdChannel = new CmdChannelIo(this.host, portCmd);
 		gpsChannel = new GpsChannelIo(this.host, portGps);
-		
+
 		cmdListener = new CmdChannelListener(cmdChannel, errh);
-		cmdListener.addObserver(this);
+		cmdListener.addPackageHandler(this);
+		
 		gpsListener = new GpsChannelListener(gpsChannel, errh);
 	}
 	
@@ -57,7 +61,7 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 		switch(cmd.getCode()) {
 		
 		case CmdPkg.REGISTER_NICK_ACK:
-			Integer id = (Integer) cmd.getData();
+			Integer id = protocolReader.getRegisterNickAck(cmd);
 			if (id != 0) {
 				userid = id;
 				if (udptoken != null) {
@@ -67,7 +71,7 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 			break;
 			
 		case CmdPkg.INITIALIZE_UDP:
-			udptoken = (Integer) cmd.getData();
+			udptoken = protocolReader.getInitializeUdpToken(cmd);
 			if (userid != null) {
 				udpInitialized = false;
 				runUdpInitializer();
@@ -75,7 +79,7 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 			break;
 
 		case CmdPkg.INITIALIZE_UDP_ACK:
-			Byte status = (Byte) cmd.getData();
+			Byte status = protocolReader.getUdpAck(cmd);
 			if (status == 1) {
 				udpInitialized = true;
 				// signal condition variable
@@ -130,12 +134,12 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 	
 	@Override
 	public void addCmdHandler(CmdPkgHandler handler) {
-		cmdListener.addObserver(handler);
+		cmdListener.addPackageHandler(handler);
 	}
 
 	@Override
 	public void addGpsHandler(GpsPkgHandler handler) {
-		gpsListener.addObserver(handler);
+		gpsListener.addPackageHandler(handler);
 	}
 
 	@Override
@@ -150,7 +154,7 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 	
 	public GpsChannel getInitializedGpsChannel() {
 		if (!udpInitialized) {
-			return null;
+			waitForGpsChannel();
 		}
 		
 		return gpsChannel;
@@ -160,7 +164,7 @@ public class GpshubClientThreads implements GpshubClient, CmdPkgHandler {
 	 * Method waits on condition variable until gps channel is initialized.
 	 * This method can't be invoked before start().
 	 */
-	public void waitForGpsChannel() {
+	private void waitForGpsChannel() {
 		if (!started) {
 			throw new IllegalStateException("GpshubClient is not started!");
 		}

@@ -45,7 +45,7 @@ public class CmdChannelListener extends Thread {
 		}
 	}
 	
-	public void addObserver(CmdPkgHandler packageHandler) {
+	public void addPackageHandler(CmdPkgHandler packageHandler) {
 		observers.add(packageHandler);
 	}
 	

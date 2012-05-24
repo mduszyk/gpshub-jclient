@@ -1,5 +1,7 @@
 package gpshub.client;
 
+import java.nio.ByteBuffer;
+
 public class CmdPkg {
 	
 	public static final byte REGISTER_NICK = 0x1;
@@ -12,13 +14,13 @@ public class CmdPkg {
 	
 	private byte code;
 	private short length;
-	private Object data;
+	private byte[] data;
 	
 	public void CommanPackage() {
 		
 	}
 	
-	public void CommanPackage(byte code, short lenght, Object data) {
+	public void CommanPackage(byte code, short lenght, byte[] data) {
 		this.code = code;
 		this.length = lenght;
 		this.data = data;
@@ -40,12 +42,21 @@ public class CmdPkg {
 		this.length = length;
 	}
 
-	public Object getData() {
+	public byte[] getData() {
 		return data;
 	}
 
-	public void setData(Object data) {
+	public void setData(byte[] data) {
 		this.data = data;
+	}
+	
+	public ByteBuffer toByteBuffer() {
+		ByteBuffer bbuf = ByteBuffer.allocate(length);
+		bbuf.put(code);
+		bbuf.putShort(length);
+		bbuf.put(data);
+		
+		return bbuf;
 	}
 	
 	@Override
@@ -53,7 +64,9 @@ public class CmdPkg {
 		StringBuilder sb = new StringBuilder("CMDPKG ");
 		sb.append(code);
 		sb.append(" ");
-		sb.append(data);
+		sb.append(length);
+		sb.append(" ");
+		sb.append(data.toString());
 		
 		return sb.toString();
 	}

@@ -10,8 +10,8 @@ public interface GpshubClient {
 	
 	GpsChannel getGpsChannel();
 	
-	void start() throws ChannelException;
-
 	GpsChannel getInitializedGpsChannel();
+
+	void start() throws ChannelException;
 	
 }

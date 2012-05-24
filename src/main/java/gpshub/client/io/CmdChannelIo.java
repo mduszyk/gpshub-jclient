@@ -11,8 +11,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
 
 public class CmdChannelIo implements CmdChannel {
 	
@@ -82,88 +80,23 @@ public class CmdChannelIo implements CmdChannel {
 			byte code = dataStreamIn.readByte();					
 			short totalLength = dataStreamIn.readShort();
 			
-			CmdPkg commandPackage = new CmdPkg();
-			commandPackage.setCode(code);
-			commandPackage.setLength(totalLength);
-			
-			switch(code) {
-				case CmdPkg.REGISTER_NICK_ACK:
-					commandPackage.setData(getRegisterNickAck());
-					break;
-				case CmdPkg.INITIALIZE_UDP:
-					commandPackage.setData(getInitializeUdpToken());
-					break;
-				case CmdPkg.BUDDIES_IDS:
-					commandPackage.setData(getBuddiesIds((totalLength - 3)));
-					break;
-				case CmdPkg.INITIALIZE_UDP_ACK:
-					commandPackage.setData(getUdpAck(totalLength - 3));
-					break;
-			}
-			
-			return commandPackage;
+			CmdPkg cmd = new CmdPkg();
+			cmd.setCode(code);
+			cmd.setLength(totalLength);
+			cmd.setData(readData(totalLength - 3));
+				
+			return cmd;
 			
 		} catch (IOException e) {
 			throw new ChannelException("Erorr in cmd channel's recv", e);
 		}
 	}
 	
-	private int getRegisterNickAck() throws ChannelException {
-		byte status;
-		try {
-			status = dataStreamIn.readByte();
-			if(status == 1){
-				int myId = dataStreamIn.readInt();
-				return myId;
-			}
-			return 0;
-		} catch (IOException e) {
-			throw new ChannelException("Erorr processing pkg: " +
-					"register nick ack", e);
-		}
-	}
-	
-	private int getInitializeUdpToken() throws ChannelException {
-		try {
-			int token = dataStreamIn.readInt(); 
-			return token;
-		} catch (IOException e) {
-			throw new ChannelException("Erorr processing pkg: " +
-					"initialize UDP", e);
-		}
-	}
-	
-	private byte getUdpAck(int dataLength) throws ChannelException {
-		try {
-			return dataStreamIn.readByte();
-		} catch (IOException e) {
-			throw new ChannelException("Erorr processing pkg:  " +
-					"initialize UPD ACK", e);
-		}
+	private byte[] readData(int len) throws IOException {
+		byte[] buf = new byte[len];
+		dataStreamIn.read(buf, 0, len);
 		
-	}
-	
-	private Map<Integer, String> getBuddiesIds(int dataLength) 
-	throws IOException {
-		Map<Integer, String> buddiesIds = new HashMap<Integer, String>();
-		
-		byte[] buf = new byte[dataLength];
-		
-		int n = 0;
-		while (n < dataLength) {
-			int userid = dataStreamIn.readInt();
-			n += 4;
-			int i = 0;
-			byte b;
-			while ((b = dataStreamIn.readByte()) != 0)
-				buf[i++] = b;
-			String nick = new String(buf, 0, i);
-			buddiesIds.put(userid, nick);
-			i++; // skip '\0'
-			n += i;
-		}
-		
-		return buddiesIds;
+		return buf;
 	}
 	
 	public void close() {
