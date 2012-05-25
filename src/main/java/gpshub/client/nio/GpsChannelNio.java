@@ -155,6 +155,7 @@ public class GpsChannelNio implements GpsChannel {
 		bBuffer.order(ByteOrder.BIG_ENDIAN);
 		bBuffer.putInt(userid);
 		bBuffer.putInt(udptoken);
+		bBuffer.flip();
 		
 		queueSend(bBuffer);
 	}
@@ -178,6 +179,7 @@ public class GpsChannelNio implements GpsChannel {
 		bBuffer.putInt(longitude);
 		bBuffer.putInt(latitude);
 		bBuffer.putInt(altitude);
+		bBuffer.flip();
 		
 		queueSend(bBuffer);
 	}

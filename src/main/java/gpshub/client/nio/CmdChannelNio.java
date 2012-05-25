@@ -117,13 +117,16 @@ public class CmdChannelNio implements CmdChannel {
 			return;
 		}
 		
-		if (readBuffer.position() > 3) {
+		int availableData = readBuffer.position(); 
+		
+		while (availableData > 3) {
 			readBuffer.flip();
 			byte code = readBuffer.get();					
 			short totalLength = readBuffer.getShort();
 			
-			if (readBuffer.position() >= totalLength) {
+			if (availableData >= totalLength) {
 				// we have complete package
+				availableData -= totalLength;
 
 				byte[] buf = new byte[totalLength - 3];
 				readBuffer.get(buf, 0, totalLength - 3);
