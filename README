@@ -1,3 +1,4 @@
 Java client library for gpshub server
 
-- non-blocking io (java nio)
+- client library for TCP and UDP server, communication via binary protocols.
+- two versions of library, threads driven - standard I/O and event driven non-blocking IO.
